@@ -19,9 +19,41 @@ describe('LocalPlannerRepository', () => {
   it('round trips a planning snapshot', () => {
     const repo = new LocalPlannerRepository(storage);
     const sample = createSampleSnapshot();
-    const snapshot = { ...sample, suitcase: { ...sample.suitcase, length: 61 } };
+    const snapshot = { ...sample, suitcases: sample.suitcases.map((s, i) => (i === 0 ? { ...s, length: 61 } : s)) };
     repo.save(snapshot);
-    expect(repo.load().value.suitcase.length).toBe(61);
+    expect(repo.load().value.suitcases[0]?.length).toBe(61);
+  });
+
+  it('keeps item assignments through a reload', () => {
+    const repo = new LocalPlannerRepository(storage);
+    const sample = createSampleSnapshot();
+    repo.save(sample);
+    const loaded = repo.load().value;
+    const camera = loaded.items.find((item) => item.id === 'camera');
+    expect(camera?.suitcaseId).toBe('case-carry');
+  });
+
+  it('migrates legacy single-suitcase snapshots', () => {
+    storage.setItem('c2c-004.planner', JSON.stringify({
+      suitcase: { length: 50, width: 30, height: 20, maxWeight: 12 },
+      selectedPlan: 'minimal',
+      items: [{ id: 'coat', name: '外套', category: '衣物', length: 10, width: 10, height: 5, weight: 1, priority: 2, mustHave: true }],
+    }));
+    const result = new LocalPlannerRepository(storage).load();
+    expect(result.warning).toBeUndefined();
+    expect(result.value.suitcases).toHaveLength(1);
+    expect(result.value.suitcases[0]?.length).toBe(50);
+    expect(result.value.selectedPlan).toBe('minimal');
+  });
+
+  it('clears assignments pointing at deleted suitcases', () => {
+    storage.setItem('c2c-004.planner', JSON.stringify({
+      suitcases: [{ id: 'case-1', name: '登机箱', length: 50, width: 30, height: 20, maxWeight: 12 }],
+      selectedPlan: 'comfort',
+      items: [{ id: 'coat', name: '外套', category: '衣物', length: 10, width: 10, height: 5, weight: 1, priority: 2, mustHave: true, suitcaseId: 'gone' }],
+    }));
+    const result = new LocalPlannerRepository(storage).load();
+    expect(result.value.items[0]?.suitcaseId).toBeUndefined();
   });
 
   it('returns sample data when storage is empty', () => {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { PackingItem, PackingPlan, Suitcase } from '../../core/models';
-const props = defineProps<{ plan: PackingPlan; suitcase: Suitcase; items: PackingItem[]; view: 'top'|'side'; selectedId?: string }>();
+import type { PackingItem, Suitcase, SuitcasePlan } from '../../core/models';
+const props = defineProps<{ plan: SuitcasePlan; suitcase: Suitcase; items: PackingItem[]; view: 'top'|'side'; selectedId?: string }>();
 const emit = defineEmits<{ select: [id: string] }>();
 const colors = ['#df6d45', '#507d68', '#d8a84e', '#5978a7', '#9d6a83', '#6d7d86'];
 const itemIndex = computed(() => new Map(props.items.map((item, index) => [item.id, index])));
